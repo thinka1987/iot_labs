@@ -1,0 +1,221 @@
+
+var mysql = require('mysql');
+var moment= require('moment');
+var Thingy = require('/home/pi/Nordic-Thingy52-Nodejs/index');
+const Hs100Api =  require('/home/pi/hs100-api/node_modules/hs100-api');
+var enabled;
+const PiCamera = require('pi-camera');
+const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+var ffmpeg = require("fluent-ffmpeg");
+ffmpeg.setFfmpegPath(ffmpegPath);
+
+console.log('Reading Thingy environment sensors!');
+const client = new Hs100Api.Client();
+const lightplug = client.getPlug({host: '192.168.230.203'});
+lightplug.g
+lightplug.setPowerState(false);
+var powerState=false ;
+
+var con = mysql.createConnection({
+    host: "localhost",
+    user: "admin",
+    password: "your_password",
+    database: "sensor_data"
+  });
+
+  con.connect(function(err) {
+    if (err) throw err;
+});
+
+function onTemperatureData(temperature) {
+             
+    insertData('temperature' ,temperature);
+    if (temperature >= 25){
+        lightplug.g
+        lightplug.setPowerState(true);
+        if(powerState == false){
+        const myCamera = new PiCamera({
+            mode: 'video',
+            output: `${ __dirname }/video.h264`,
+            width: 450,
+            height: 300,
+            timeout: 10000, // Record for 5 seconds
+            nopreview: true,
+          });
+           
+          myCamera.record()
+            .then((result) => {
+              // Your video was captured
+              
+          var inFilename = "video.h264";
+          var outFilename = "/var/www/html/video.mp4";
+          
+          ffmpeg(inFilename)
+            .outputOptions("-c:v", "copy") // this will copy the data instead or reencode it
+            .save(outFilename);
+            console.log("Video has been recorded .....");
+            alert("Video has been recorded .....");
+            })
+            .catch((error) => {
+               console.log(error);
+            });
+            powerState=true;
+     }
+    }
+     else{
+        powerState=false;
+        lightplug.g
+        lightplug.setPowerState(false);
+
+     }
+    console.log('Temperature sensor: ' + temperature);
+}
+
+
+
+function onPressureData(pressure) {
+    insertData('pressure' ,pressure);
+    console.log('Pressure sensor: ' + pressure);
+}
+
+function onHumidityData(humidity) {
+    insertData('humidity' ,humidity);
+    console.log('Humidity sensor: ' + humidity);
+}
+
+function onGasData(gas) {
+    insertData('gas' ,gas.eco2+'|'+gas.tvoc);
+    console.log('Gas sensor: eCO2 ' + gas.eco2 + ' - TVOC ' + gas.tvoc );
+}
+
+function onColorData(color) {
+    insertData('color' ,color.red+'|'+color.green+'|'+color.blue+'|'+color.clear);
+    console.log('Color sensor: r ' + color.red +
+                             ' g ' + color.green +
+                             ' b ' + color.blue +
+                             ' c ' + color.clear );
+}
+
+function insertData(type ,value){
+
+    var data = {
+        type: type,
+        value: value,
+        date_time: moment().format('YYYY-MM-DD')
+    };
+     
+    var query = con.query('INSERT INTO data SET ?', data,
+        function(err, result) {
+            console.log(result);
+     });
+
+}
+
+function onButtonChange(state) {
+    if (state == 'Pressed') {
+        if (enabled) {
+            enabled = false;
+            this.temperature_disable(function(error) {
+                console.log('Temperature sensor stopped! ' + ((error) ? error : ''));
+            });
+            this.pressure_disable(function(error) {
+                console.log('Pressure sensor stopped! ' + ((error) ? error : ''));
+            });
+            this.humidity_disable(function(error) {
+                console.log('Humidity sensor stopped! ' + ((error) ? error : ''));
+            });
+            this.color_disable(function(error) {
+                console.log('Color sensor stopped! ' + ((error) ? error : ''));
+            });
+            this.gas_disable(function(error) {
+                console.log('Gas sensor stopped! ' + ((error) ? error : ''));
+            });
+        }
+        else {
+            enabled = true;
+            this.temperature_enable(function(error) {
+                console.log('Temperature sensor started! ' + ((error) ? error : ''));
+            });
+            this.pressure_enable(function(error) {
+                console.log('Pressure sensor started! ' + ((error) ? error : ''));
+            });
+            this.humidity_enable(function(error) {
+                console.log('Humidity sensor started! ' + ((error) ? error : ''));
+            });
+            this.color_enable(function(error) {
+                console.log('Color sensor started! ' + ((error) ? error : ''));
+            });
+            this.gas_enable(function(error) {
+                console.log('Gas sensor started! ' + ((error) ? error : ''));
+            });
+        }
+    }
+}
+
+function onDiscover(thingy) {
+  console.log('Discovered: ' + thingy);
+
+  thingy.on('disconnect', function() {
+    console.log('Disconnected!');
+  });
+
+  thingy.connectAndSetUp(function(error) {
+    console.log('Connected! ' + error ? error : '');
+
+    thingy.on('temperatureNotif', onTemperatureData);
+    thingy.on('pressureNotif', onPressureData);
+    thingy.on('humidityNotif', onHumidityData);
+    thingy.on('gasNotif', onGasData);
+    thingy.on('colorNotif', onColorData);
+    thingy.on('buttonNotif', onButtonChange);
+
+   thingy.temperature_interval_set(1000, function(error) {
+        if (error) {
+            console.log('Temperature sensor configure! ' + error);
+        }
+    });
+    thingy.pressure_interval_set(1000, function(error) {
+        if (error) {
+            console.log('Pressure sensor configure! ' + error);
+        }
+    });
+    thingy.humidity_interval_set(1000, function(error) {
+        if (error) {
+            console.log('Humidity sensor configure! ' + error);
+        }
+    });
+    thingy.color_interval_set(1000, function(error) {
+        if (error) {
+            console.log('Color sensor configure! ' + error);
+        }
+    });
+    thingy.gas_mode_set(1, function(error) {
+        if (error) {
+            console.log('Gas sensor configure! ' + error);
+        }
+    });
+
+    enabled = true;
+
+    thingy.temperature_enable(function(error) {
+        console.log('Temperature sensor started! ' + ((error) ? error : ''));
+    });
+    thingy.pressure_enable(function(error) {
+        console.log('Pressure sensor started! ' + ((error) ? error : ''));
+    });
+    thingy.humidity_enable(function(error) {
+        console.log('Humidity sensor started! ' + ((error) ? error : ''));
+    });
+    thingy.color_enable(function(error) {
+        console.log('Color sensor started! ' + ((error) ? error : ''));
+    });
+    thingy.gas_enable(function(error) {
+        console.log('Gas sensor started! ' + ((error) ? error : ''));
+    });
+    thingy.button_enable(function(error) {
+        console.log('Button started! ' + ((error) ? error : ''));
+    });
+  });
+}
+
+Thingy.discover(onDiscover);

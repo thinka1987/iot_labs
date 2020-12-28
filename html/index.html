@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <!-- CSS -->
+        <link href="css/roboto.css" rel="stylesheet">
+        <link rel="stylesheet" href="css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+        <link rel="stylesheet" href="css/all.css">
+        <link rel="stylesheet" href="css/font-awesome.css">
+        <link rel="stylesheet" href="css/style.css">
+        <script src="js/jquery-3.4.1.min.js"></script>   
+        <script src="js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+        <script src="//cdn.rawgit.com/Mikhus/canvas-gauges/gh-pages/download/2.1.7/all/gauge.min.js"></script>
+        <title>IOT LABS- Thingy52 Sensor Data</title>
+        
+        
+        <script src="js/moment.min.js"></script>
+	<script src="js/chart.js"></script>
+	<script src="js/chartjs-plugin-streaming.js"></script>
+        
+        
+    </head>
+    <body>
+        <div class="row header-sty">
+            <div class="col-md-10 offset-md-1">
+                <h5 class="mb-0 page-heading-txt">Thingy52 Real Time Sensor Data</h5>
+            </div>
+        </div>
+        <div class="row page-min-height">
+            <div class="col-md-10 offset-md-1">
+                <div class="row mar-main-wrapper">
+                    <div class="col-md-12 pad-main-wrapper">
+                        <div class="row">
+                            <div class="col-md-12 div-wrapper">
+                                <p>Temperature</p>
+                                <canvas id="temperature"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-12 pad-main-wrapper">
+                        <div class="row">
+                            <div class="col-md-12 div-wrapper">
+                                <p>Pressure</p>
+                                <canvas id="pressure"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-12 pad-main-wrapper">
+                        <div class="row">
+                            <div class="col-md-12 div-wrapper">
+                                <p>Humidity</p>
+                                <canvas id="humidity"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+
+                <div class="row mar-main-wrapper">
+                    <div class="col-md-8 pad-main-wrapper">
+                        <div class="row">
+                            <div class="col-md-12 div-wrapper">
+                                <p>Video</p>
+                                    <video width="320" height="240" id="video" controls>
+                                      <source id="main"  type="video/mp4">
+                                   </video>
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+						<div class="col-md-4 text-center">
+								<button type="button" onclick="loadVideo()" class="btn btn-primary btn-submit">Load Video</button>
+							</div>
+                    <div class="col-md-4 text-center">
+                        <button type="button" onclick="makeServerRequest('test','test')" class="btn btn-primary btn-submit">HS100 control</button>
+					</div>
+					
+                </div>
+
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 page-footer">
+                <p>© 2020 IOT</p>
+            </div>
+        </div>
+    </body>
+    <input type="hidden" id="temp"  value="0">
+    <input type="hidden" id="pressure"  value="0">
+    <input type="hidden" id="humidity"  value="0">
+</html>
+
+<script>
+var chartColors = {
+	red: 'rgb(255, 99, 132)',
+	orange: 'rgb(255, 159, 64)',
+	yellow: 'rgb(255, 205, 86)',
+	green: 'rgb(75, 192, 192)',
+	blue: 'rgb(54, 162, 235)',
+	purple: 'rgb(153, 102, 255)',
+	grey: 'rgb(201, 203, 207)'
+};
+
+function randomScalingFactor() {
+        var temp =$("#temp").val();
+	return temp;
+}
+
+function onRefresh(chart) {
+	chart.config.data.datasets.forEach(function(dataset) {
+		dataset.data.push({
+			x: Date.now(),
+			y: randomScalingFactor()
+		});
+	});
+}
+
+var color = Chart.helpers.color;
+var config = {
+	type: 'line',
+	data: {
+		datasets: [{
+			label: 'Temprature values',
+			backgroundColor: color(chartColors.red).alpha(0.5).rgbString(),
+			borderColor: chartColors.red,
+			fill: false,
+			lineTension: 0,
+			borderDash: [8, 4],
+			data: []
+		}]
+	},
+	options: {
+		title: {
+			display: true,
+			text: 'Thingy 52 real time temprature values'
+		},
+		scales: {
+			xAxes: [{
+				type: 'realtime',
+				realtime: {
+					duration: 20000,
+					refresh: 1000,
+					delay: 2000,
+					onRefresh: onRefresh
+				}
+			}],
+			yAxes: [{
+				scaleLabel: {
+					display: true,
+					labelString: 'value'
+				}
+			}]
+		},
+		tooltips: {
+			mode: 'nearest',
+			intersect: false
+		},
+		hover: {
+			mode: 'nearest',
+			intersect: false
+		}
+	}
+};
+
+
+function randomScalingFactor2() {
+        var pressure =$("#pressure").val();
+	return pressure;
+}
+
+function onRefresh2(chart) {
+	chart.config.data.datasets.forEach(function(dataset) {
+		dataset.data.push({
+			x: Date.now(),
+			y: randomScalingFactor2()
+		});
+	});
+}
+
+
+
+var color = Chart.helpers.color;
+var config2 = {
+	type: 'line',
+	data: {
+		datasets: [{
+			label: 'Pressure values',
+			backgroundColor: color(chartColors.yellow).alpha(0.5).rgbString(),
+			borderColor: chartColors.yellow,
+			fill: false,
+			lineTension: 0,
+			borderDash: [8, 4],
+			data: []
+		}]
+	},
+	options: {
+		title: {
+			display: true,
+			text: 'Thingy 52 real time pressure values'
+		},
+		scales: {
+			xAxes: [{
+				type: 'realtime',
+				realtime: {
+					duration: 20000,
+					refresh: 1000,
+					delay: 2000,
+					onRefresh: onRefresh2
+				}
+			}],
+			yAxes: [{
+				scaleLabel: {
+					display: true,
+					labelString: 'value'
+				}
+			}]
+		},
+		tooltips: {
+			mode: 'nearest',
+			intersect: false
+		},
+		hover: {
+			mode: 'nearest',
+			intersect: false
+		}
+	}
+};
+
+
+function randomScalingFactor3() {
+        var humidity =$("#humidity").val();
+	return humidity;
+}
+
+function onRefresh3(chart) {
+	chart.config.data.datasets.forEach(function(dataset) {
+		dataset.data.push({
+			x: Date.now(),
+			y: randomScalingFactor3()
+		});
+	});
+}
+
+var color = Chart.helpers.color;
+var config3 = {
+	type: 'line',
+	data: {
+		datasets: [{
+			label: 'Humidity Values',
+			backgroundColor: color(chartColors.green).alpha(0.5).rgbString(),
+			borderColor: chartColors.green,
+			fill: false,
+			lineTension: 0,
+			borderDash: [8, 4],
+			data: []
+		}]
+	},
+	options: {
+		title: {
+			display: true,
+			text: 'Thingy 52 real time humidity values'
+		},
+		scales: {
+			xAxes: [{
+				type: 'realtime',
+				realtime: {
+					duration: 20000,
+					refresh: 1000,
+					delay: 2000,
+					onRefresh: onRefresh3
+				}
+			}],
+			yAxes: [{
+				scaleLabel: {
+					display: true,
+					labelString: 'value'
+				}
+			}]
+		},
+		tooltips: {
+			mode: 'nearest',
+			intersect: false
+		},
+		hover: {
+			mode: 'nearest',
+			intersect: false
+		}
+	}
+};
+
+
+window.onload = function() {
+	var ctx = document.getElementById('temperature').getContext('2d');
+	window.myChart = new Chart(ctx, config);
+        
+        var ctx2 = document.getElementById('pressure').getContext('2d');
+	window.myChart = new Chart(ctx2, config2);
+        
+        var ctx3 = document.getElementById('humidity').getContext('2d');
+	window.myChart = new Chart(ctx3, config3);
+};
+
+
+
+ 
+</script>
+
+<script>
+var interval = 1000;  // 1000 = 1 second, 3000 = 3 seconds
+function doAjax() {
+    $.ajax({
+            type: 'GET',
+            url: 'http://localhost:3001/measurement',
+            dataType: 'json',
+            success: function (data) {
+                    console.log(data[0][0].type) ;
+                    console.log(data[1][0].type) ;
+                    console.log(data[2][0].type) ;
+                    $("#temp").val(data[0][0].value);
+                    $("#pressure").val(data[2][0].value);
+                    $("#humidity").val(data[1][0].value);
+            },
+            complete: function (data) {
+                    // Schedule the next
+                    setTimeout(doAjax, interval);
+            }
+    });
+}
+setTimeout(doAjax, interval);
+</script>
+<script>
+	function makeServerRequest(type, state, cb) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(() => {
+            try {
+                fetch('http://localhost:3002').then(data => data.json()).then(d => cb(d));
+            } catch (e) {
+                reject(e);
+            }
+            resolve();
+        }, 200)
+
+    })
+
+}
+function loadVideo() {
+	
+    var src = "http://localhost:8081/video.mp4";
+    $("#video").attr("src", src)
+}
+$.ajax({ 
+	type: 'GET', 
+	url: 'http://localhost:3001/deleteoldData', 
+	dataType: 'json',
+	 success: function (data) { }, 
+	 complete: function (data) {  
+
+	 }
+	 }); 
+</script>
